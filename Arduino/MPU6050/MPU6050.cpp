@@ -3037,8 +3037,8 @@ bool MPU6050::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t b
     setMemoryBank(bank);
     setMemoryStartAddress(address);
     uint8_t chunkSize;
-    uint8_t *verifyBuffer;
-    uint8_t *progBuffer=0;
+    uint8_t *verifyBuffer = 0;
+    uint8_t *progBuffer = 0;
     uint16_t i;
     uint8_t j;
     if (verify) verifyBuffer = (uint8_t *)malloc(MPU6050_DMP_MEMORY_CHUNK_SIZE);
@@ -3110,10 +3110,16 @@ bool MPU6050::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t b
     return true;
 }
 bool MPU6050::writeProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t bank, uint8_t address, bool verify) {
-    return writeMemoryBlock(data, dataSize, bank, address, verify, true);
+    return writeMemoryBlock(data, dataSize, bank, address,
+#if defined (__STM32F1__)
+    		false, false
+#else
+    		verify, true
+#endif
+    		);
 }
 bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, bool useProgMem) {
-    uint8_t *progBuffer = 0;
+	uint8_t *progBuffer = 0;
 	uint8_t success, special;
     uint16_t i, j;
     if (useProgMem) {
@@ -3144,12 +3150,19 @@ bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, b
             Serial.print(", length=");
             Serial.println(length);*/
             if (useProgMem) {
-                if (sizeof(progBuffer) < length) progBuffer = (uint8_t *)realloc(progBuffer, length);
+                if (sizeof(progBuffer) < length)
+                		progBuffer = (uint8_t *)realloc(progBuffer, length);
                 for (j = 0; j < length; j++) progBuffer[j] = pgm_read_byte(data + i + j);
             } else {
                 progBuffer = (uint8_t *)data + i;
             }
-            success = writeMemoryBlock(progBuffer, length, bank, offset, true);
+            success = writeMemoryBlock(progBuffer, length, bank, offset,
+#if defined (__STM32F1__)
+            		false
+#else
+            		true
+#endif
+            );
             i += length;
         } else {
             // special instruction
@@ -3189,7 +3202,13 @@ bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, b
     return true;
 }
 bool MPU6050::writeProgDMPConfigurationSet(const uint8_t *data, uint16_t dataSize) {
-    return writeDMPConfigurationSet(data, dataSize, true);
+    return writeDMPConfigurationSet(data, dataSize,
+#if defined (__STM32F1__)
+    		false
+#else
+    		true
+#endif
+			);
 }
 
 // DMP_CFG_1 register
